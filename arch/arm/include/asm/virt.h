@@ -65,6 +65,8 @@ void hyp_mode_check(void);
 /* Reports the availability of HYP mode */
 static inline bool is_hyp_mode_available(void)
 {
+	//	用于判断ARMv8的Hyp模式是否可用，实际是通过判断__boot_cpu_mode的值来完成;
+	//	值是在arch/arm64/kernel/head.S中定义，在启动阶段会设置该值；
 	return ((__boot_cpu_mode & MODE_MASK) == HYP_MODE &&
 		!(__boot_cpu_mode & BOOT_CPU_MODE_MISMATCH));
 }

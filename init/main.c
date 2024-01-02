@@ -555,6 +555,8 @@ asmlinkage __visible void __init start_kernel(void)
 	boot_cpu_init();
 	page_address_init();
 	pr_notice("%s", linux_banner);
+
+	// 定义在 arch/arm64/kernel/setup.c 内部会加载并解析dts
 	setup_arch(&command_line);
 	/*
 	 * Set up the the initial canary and entropy after arch
@@ -978,6 +980,7 @@ static void __init do_basic_setup(void)
 	init_irq_proc();
 	do_ctors();
 	usermodehelper_enable();
+	// 调用系统中素有initcall回调函数进程初始化
 	do_initcalls();
 }
 

@@ -70,47 +70,53 @@ typedef int (*kprobe_fault_handler_t) (struct kprobe *, struct pt_regs *,
 typedef int (*kretprobe_handler_t) (struct kretprobe_instance *,
 				    struct pt_regs *);
 
+// 一个 struct kprobe 结构表示一个探测点
 struct kprobe {
-	struct hlist_node hlist;
+    struct hlist_node hlist;
 
-	/* list of kprobes for multi-handler support */
-	struct list_head list;
+    /* list of kprobes for multi-handler support */
+    struct list_head list;
 
-	/*count the number of times this probe was temporarily disarmed */
-	unsigned long nmissed;
+    /*count the number of times this probe was temporarily disarmed */
+    unsigned long nmissed;
 
-	/* location of the probe point */
-	kprobe_opcode_t *addr;
+    /* location of the probe point */
+    // typedef int kprobe_opcode_t;
+    kprobe_opcode_t *addr;   // 要探测的指令所在的内存地址（由于需要知道指令的内存地址，所以比较少使用）。
 
-	/* Allow user to indicate symbol name of the probe point */
-	const char *symbol_name;
+    /* Allow user to indicate symbol name of the probe point */
+    const char *symbol_name;  // 要探测的内核函数，symbol_name 与 addr 只能选择一个进行探测。
 
-	/* Offset into the symbol */
-	unsigned int offset;
+    /* Offset into the symbol */
+    unsigned int offset;   // 探测点在内核函数内的偏移量，用于探测内核函数内部的指令，如果该值为0表示函数的入口。
 
-	/* Called before addr is executed. */
-	kprobe_pre_handler_t pre_handler;
+    /* Called before addr is executed. */
+    // typedef int (*kprobe_pre_handler_t) (struct kprobe *, struct pt_regs *);
+    kprobe_pre_handler_t pre_handler;   // 在探测点处的指令执行前，被调用的调试函数。
 
-	/* Called after addr is executed, unless... */
-	kprobe_post_handler_t post_handler;
+    /* Called after addr is executed, unless... */
+    // typedef void (*kprobe_post_handler_t) (struct kprobe *, struct pt_regs *, unsigned long flags);
+    kprobe_post_handler_t post_handler;   // 在探测点处的指令执行后，被调用的调试函数。
 
-	/*
-	 * ... called if executing addr causes a fault (eg. page fault).
-	 * Return 1 if it handled fault, otherwise kernel will see it.
-	 */
-	kprobe_fault_handler_t fault_handler;
+    /*
+     * ... called if executing addr causes a fault (eg. page fault).
+     * Return 1 if it handled fault, otherwise kernel will see it.
+     */
+    // typedef int (*kprobe_fault_handler_t) (struct kprobe *, struct pt_regs *, int trapnr);
+    kprobe_fault_handler_t fault_handler;  // 在执行 pre_handler、post_handler 或单步执行被探测指令时出现内存异常，则会调用这个回调函数。
 
-	/* Saved opcode (which has been replaced with breakpoint) */
-	kprobe_opcode_t opcode;
+    /* Saved opcode (which has been replaced with breakpoint) */
+     // typedef int kprobe_opcode_t;
+    kprobe_opcode_t opcode;
 
-	/* copy of the original instruction */
-	struct arch_specific_insn ainsn;
+    /* copy of the original instruction */
+    struct arch_specific_insn ainsn;
 
-	/*
-	 * Indicates various status flags.
-	 * Protected by kprobe_mutex after this kprobe is registered.
-	 */
-	u32 flags;
+    /*
+     * Indicates various status flags.
+     * Protected by kprobe_mutex after this kprobe is registered.
+     */
+    u32 flags;
 };
 
 /* Kprobe status flags */

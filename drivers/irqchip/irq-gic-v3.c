@@ -944,20 +944,20 @@ static int gic_irq_domain_translate(struct irq_domain *d,
 
 		switch (fwspec->param[0]) {
 		case 0:			/* SPI */
-			*hwirq = fwspec->param[1] + 32;
+			*hwirq = fwspec->param[1] + 32;		//	中断号
 			break;
 		case 1:			/* PPI */
 		case GIC_IRQ_TYPE_PARTITION:
-			*hwirq = fwspec->param[1] + 16;
+			*hwirq = fwspec->param[1] + 16;		//	中断号
 			break;
 		case GIC_IRQ_TYPE_LPI:	/* LPI */
-			*hwirq = fwspec->param[1];
+			*hwirq = fwspec->param[1];			//	中断号
 			break;
 		default:
 			return -EINVAL;
 		}
 
-		*type = fwspec->param[2] & IRQ_TYPE_SENSE_MASK;
+		*type = fwspec->param[2] & IRQ_TYPE_SENSE_MASK;		//	中断触发类型
 
 		/*
 		 * Make it clear that broken DTs are... broken.
@@ -1039,7 +1039,7 @@ static int gic_irq_domain_select(struct irq_domain *d,
 }
 
 static const struct irq_domain_ops gic_irq_domain_ops = {
-	.translate = gic_irq_domain_translate,
+	.translate = gic_irq_domain_translate,		// .translate的实现函数
 	.alloc = gic_irq_domain_alloc,
 	.free = gic_irq_domain_free,
 	.select = gic_irq_domain_select,

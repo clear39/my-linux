@@ -62,18 +62,18 @@
  *                wakeup devices users need to implement wakeup detection in
  *                their interrupt handlers.
  */
-#define IRQF_SHARED		0x00000080
-#define IRQF_PROBE_SHARED	0x00000100
-#define __IRQF_TIMER		0x00000200
-#define IRQF_PERCPU		0x00000400
-#define IRQF_NOBALANCING	0x00000800
-#define IRQF_IRQPOLL		0x00001000
-#define IRQF_ONESHOT		0x00002000
-#define IRQF_NO_SUSPEND		0x00004000
-#define IRQF_FORCE_RESUME	0x00008000
-#define IRQF_NO_THREAD		0x00010000
-#define IRQF_EARLY_RESUME	0x00020000
-#define IRQF_COND_SUSPEND	0x00040000
+#define IRQF_SHARED		0x00000080				//多个设备共享一个中断号，需要外设硬件支持
+#define IRQF_PROBE_SHARED	0x00000100			//中断处理程序允许sharing mismatch发生
+#define __IRQF_TIMER		0x00000200			//时钟中断
+#define IRQF_PERCPU		0x00000400				//属于特定CPU的中断
+#define IRQF_NOBALANCING	0x00000800			//禁止在CPU之间进行中断均衡处理
+#define IRQF_IRQPOLL		0x00001000			//中断被用作轮训
+#define IRQF_ONESHOT		0x00002000			//一次性触发的中断，不能嵌套，1）在硬件中断处理完成后才能打开中断；2）在中断线程化中保持关闭状态，直到该中断源上的所有thread_fn函数都执行完
+#define IRQF_NO_SUSPEND		0x00004000			//系统休眠唤醒操作中，不关闭该中断
+#define IRQF_FORCE_RESUME	0x00008000			//系统唤醒过程中必须强制打开该中断
+#define IRQF_NO_THREAD		0x00010000			//禁止中断线程化
+#define IRQF_EARLY_RESUME	0x00020000			//系统唤醒过程中在syscore阶段resume，而不用等到设备resume阶段
+#define IRQF_COND_SUSPEND	0x00040000			//与NO_SUSPEND的用户共享中断时，执行本设备的中断处理函数
 
 #define IRQF_TIMER		(__IRQF_TIMER | IRQF_NO_SUSPEND | IRQF_NO_THREAD)
 

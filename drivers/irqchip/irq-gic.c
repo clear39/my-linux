@@ -123,6 +123,7 @@ static u8 gic_cpu_map[NR_GIC_CPU_IF] __read_mostly;
 
 static DEFINE_STATIC_KEY_TRUE(supports_deactivate_key);
 
+// 在.config 中 CONFIG_ARM_GIC_MAX_NR = 1
 static struct gic_chip_data gic_data[CONFIG_ARM_GIC_MAX_NR] __read_mostly;
 
 static struct gic_kvm_info gic_v2_kvm_info;
@@ -353,20 +354,32 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 static void __exception_irq_entry gic_handle_irq(struct pt_regs *regs)
 {
 	u32 irqstat, irqnr;
+	// gic_data 只有一个成员
 	struct gic_chip_data *gic = &gic_data[0];
 	void __iomem *cpu_base = gic_data_cpu_base(gic);
 
 	do {
+		//
 		irqstat = readl_relaxed(cpu_base + GIC_CPU_INTACK);
+		// 读取GIC寄存器并获取hwirq中断号
 		irqnr = irqstat & GICC_IAR_INT_ID_MASK;
 
+		//	gic_handle_irq 函数处理中断分为两种情况，
+		// 一种是外设触发的中断，硬件中断号在16 ~ 1020之间，
+		// 一种是软件触发的中断，用于处理器之间的交互，硬件中断号在16以内
+
+		// 外设触发的中断，硬件中断号在16 ~ 1020之间
 		if (likely(irqnr > 15 && irqnr < 1020)) {
 			if (static_branch_likely(&supports_deactivate_key))
 				writel_relaxed(irqstat, cpu_base + GIC_CPU_EOI);
 			isb();
+			//	外设触发中断后，根据irq domain去查找对应的Linux IRQ中断号，进而得到中断描述符irq_desc，最终也就能调用到外设的中断处理函数了
+			// 此函数内部直接只调用 __handle_domain_irq （定义在 include/linux/irqdesc.h）
 			handle_domain_irq(gic->domain, irqnr, regs);
 			continue;
 		}
+
+		// 软件触发的中断SGI，用于处理器之间的交互，硬件中断号在16以内
 		if (irqnr < 16) {
 			writel_relaxed(irqstat, cpu_base + GIC_CPU_EOI);
 			if (static_branch_likely(&supports_deactivate_key))
@@ -380,6 +393,7 @@ static void __exception_irq_entry gic_handle_irq(struct pt_regs *regs)
 			 * Pairs with the write barrier in gic_raise_softirq
 			 */
 			smp_rmb();
+			// 处理核间交互
 			handle_IPI(irqnr, regs);
 #endif
 			continue;
@@ -1132,13 +1146,18 @@ static int gic_init_bases(struct gic_chip_data *gic, int irq_start,
 	 * Find out how many interrupts are supported.
 	 * The GIC only supports up to 1020 interrupt sources.
 	 */
+	// 读取GIC 的最大支持的中断数目，从 GIC_DIST_CTR 寄存器（这是V1版本的寄存器名字，V2中是GICD_TYPER，Interrupt Controller Type Register,）
+	// 的低五位ITLinesNumber获取的。如果ITLinesNumber等于N，那么最大支持的中断数目是32(N+1)。
+	// 此外，GIC规范规定最大的中断数目不能超过1020，1020-1023是有特别用户的interrupt ID。
 	gic_irqs = readl_relaxed(gic_data_dist_base(gic) + GIC_DIST_CTR) & 0x1f;
 	gic_irqs = (gic_irqs + 1) * 32;
 	if (gic_irqs > 1020)
 		gic_irqs = 1020;
 	gic->gic_irqs = gic_irqs;
 
+	// 分配一个 irq_domain 的结构，一个 irq_domain 代表了一个 GIC 控制器
 	if (handle) {		/* DT/ACPI */
+		// 内部直接调用__irq_domain_add 
 		gic->domain = irq_domain_create_linear(handle, gic_irqs,
 						       &gic_irq_domain_hierarchy_ops,
 						       gic);
@@ -1165,6 +1184,7 @@ static int gic_init_bases(struct gic_chip_data *gic, int irq_start,
 			irq_base = irq_start;
 		}
 
+		// 内部会调用 __irq_domain_add 
 		gic->domain = irq_domain_add_legacy(NULL, gic_irqs, irq_base,
 					hwirq_base, &gic_irq_domain_ops, gic);
 	}
@@ -1174,11 +1194,14 @@ static int gic_init_bases(struct gic_chip_data *gic, int irq_start,
 		goto error;
 	}
 
+	// GIC Distributer 部分初始化
 	gic_dist_init(gic);
+	//	GIC CPU Interface 部分初始化
 	ret = gic_cpu_init(gic);
 	if (ret)
 		goto error;
 
+	// GIC PM（电源管理模块） 部分初始化
 	ret = gic_pm_init(gic);
 	if (ret)
 		goto error;
@@ -1213,16 +1236,24 @@ static int __init __gic_init_bases(struct gic_chip_data *gic,
 		for (i = 0; i < NR_GIC_CPU_IF; i++)
 			gic_cpu_map[i] = 0xff;
 #ifdef CONFIG_SMP
+		// 设置SMP核间交互的回调函数，用于IPI
+		// set_smp_cross_call 设置 __smp_cross_call 函数指向gic_raise_softirq，本质上就是通过软件来触发GIC的SGI中断，用于核间交互；
 		set_smp_cross_call(gic_raise_softirq);
 #endif
+		// 设置CPU热插拔时GIC的回调函数
 		cpuhp_setup_state_nocalls(CPUHP_AP_IRQ_GIC_STARTING,
 					  "irqchip/arm/gic:starting",
 					  gic_starting_cpu, NULL);
+
+		// 设置中断处理handler，异常处理的入口，响应函数入口为：gic_handle_irq
+		// 将 gic_handle_irq 赋值给 handle_arch_irq
+		// handle_arch_irq 在 arch/arm64/kernel/entry.S 中调用
 		set_handle_irq(gic_handle_irq);
 		if (static_branch_likely(&supports_deactivate_key))
 			pr_info("GIC: Using split EOI/Deactivate mode\n");
 	}
 
+	// gic_init_chip 初始化 irq_chip结构
 	if (static_branch_likely(&supports_deactivate_key) && gic == &gic_data[0]) {
 		name = kasprintf(GFP_KERNEL, "GICv2");
 		gic_init_chip(gic, NULL, name, true);
@@ -1363,15 +1394,15 @@ static int gic_of_setup(struct gic_chip_data *gic, struct device_node *node)
 	if (!gic || !node)
 		return -EINVAL;
 
-	gic->raw_dist_base = of_iomap(node, 0);
+	gic->raw_dist_base = of_iomap(node, 0);		//	映射GIC Distributor的寄存器地址空间
 	if (WARN(!gic->raw_dist_base, "unable to map gic dist registers\n"))
 		goto error;
 
-	gic->raw_cpu_base = of_iomap(node, 1);
+	gic->raw_cpu_base = of_iomap(node, 1);  // 映射GIC CPU interface的寄存器地址空间
 	if (WARN(!gic->raw_cpu_base, "unable to map gic cpu registers\n"))
 		goto error;
 
-	if (of_property_read_u32(node, "cpu-offset", &gic->percpu_offset))
+	if (of_property_read_u32(node, "cpu-offset", &gic->percpu_offset))  // 处理cpu-offset属性
 		gic->percpu_offset = 0;
 
 	return 0;
@@ -1448,6 +1479,7 @@ gic_of_init(struct device_node *node, struct device_node *parent)
 
 	gic = &gic_data[gic_cnt];
 
+	// 设置GIC的地址信息
 	ret = gic_of_setup(gic, node);
 	if (ret)
 		return ret;
@@ -1459,6 +1491,7 @@ gic_of_init(struct device_node *node, struct device_node *parent)
 	if (gic_cnt == 0 && !gic_check_eoimode(node, &gic->raw_cpu_base))
 		static_branch_disable(&supports_deactivate_key);
 
+	// 
 	ret = __gic_init_bases(gic, -1, &node->fwnode);
 	if (ret) {
 		gic_teardown(gic);
@@ -1466,12 +1499,12 @@ gic_of_init(struct device_node *node, struct device_node *parent)
 	}
 
 	if (!gic_cnt) {
-		gic_init_physaddr(node);
+		gic_init_physaddr(node);  // 对于不支持big.LITTLE switcher（CONFIG_BL_SWITCHER）的系统，该函数为空
 		gic_of_setup_kvm_info(node);
 	}
 
-	if (parent) {
-		irq = irq_of_parse_and_map(node, 0);
+	if (parent) {  // 处理interrupt级联
+		irq = irq_of_parse_and_map(node, 0);  // 解析second GIC的interrupts属性，并进行mapping，返回IRQ number
 		gic_cascade_irq(gic_cnt, irq);
 	}
 
@@ -1481,6 +1514,8 @@ gic_of_init(struct device_node *node, struct device_node *parent)
 	gic_cnt++;
 	return 0;
 }
+
+// 声明结构，并将该结构放置到 __irqchip_of_table 段中
 IRQCHIP_DECLARE(gic_400, "arm,gic-400", gic_of_init);
 IRQCHIP_DECLARE(arm11mp_gic, "arm,arm11mp-gic", gic_of_init);
 IRQCHIP_DECLARE(arm1176jzf_dc_gic, "arm,arm1176jzf-devchip-gic", gic_of_init);

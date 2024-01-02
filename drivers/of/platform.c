@@ -177,6 +177,9 @@ static struct platform_device *of_platform_device_create_pdata(
 {
 	struct platform_device *dev;
 
+	// of_device_is_available 判断给定的节点是否可用，方法如下：
+	// 1、不存在"status"节点，默认为可用；
+	// 2、存在"status"节点, 且值为"okay"或者"ok"，则为可用，否则为不可用；
 	if (!of_device_is_available(np) ||
 	    of_node_test_and_set_flag(np, OF_POPULATED))
 		return NULL;
@@ -486,6 +489,7 @@ int of_platform_populate(struct device_node *root,
 	pr_debug("%s()\n", __func__);
 	pr_debug(" starting at: %pOF\n", root);
 
+	// 为根节点的每个直接子节点调用递归函数 of_platform_bus_create
 	for_each_child_of_node(root, child) {
 		rc = of_platform_bus_create(child, matches, lookup, parent, true);
 		if (rc) {
@@ -543,6 +547,7 @@ static int __init of_platform_default_populate_init(void)
 
 	return 0;
 }
+// dtb真正的设备节点解析
 arch_initcall_sync(of_platform_default_populate_init);
 #endif
 

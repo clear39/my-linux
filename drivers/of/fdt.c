@@ -1221,10 +1221,13 @@ bool __init early_init_dt_scan(void *params)
 {
 	bool status;
 
+	// 此函数将params保存到全局变量 initial_boot_params
 	status = early_init_dt_verify(params);
 	if (!status)
 		return false;
 
+	// 此函数解析设备树中的chosen 节点，初始化{size,address}-cell信息
+	// 根据memory属性设置memory
 	early_init_dt_scan_nodes();
 	return true;
 }
@@ -1239,6 +1242,9 @@ bool __init early_init_dt_scan(void *params)
  */
 void __init unflatten_device_tree(void)
 {
+	// initial_boot_params 实在 调用该函数中的函数前面setup_machine_fdt(__fdt_pointer)中赋值
+	// 将 FDT 的每个节点解析为一个device node类型，并把他们保存到一块连续的内存中，然后of_root指向这一块内存
+	// 定义在 drivers/of/fdt.c 中
 	__unflatten_device_tree(initial_boot_params, NULL, &of_root,
 				early_init_dt_alloc_memory_arch, false);
 

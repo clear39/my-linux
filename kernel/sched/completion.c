@@ -149,6 +149,9 @@ EXPORT_SYMBOL(wait_for_completion);
  * Return: 0 if timed out, and positive (at least 1, or number of jiffies left
  * till timeout) if completed.
  */
+// 返回结果是unsigned long型的变量，代表剩余的系统时钟节拍数，
+// 即传入的第二个参数所代表的时钟节拍数与等待进程结束消耗的时钟节拍之差。
+// 如果等待是正常结束，则返回值的范围在0到函数的第二个输入参数值之间。
 unsigned long __sched
 wait_for_completion_timeout(struct completion *x, unsigned long timeout)
 {

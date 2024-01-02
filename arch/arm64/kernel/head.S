@@ -433,7 +433,7 @@ __primary_switched:
 	stp	xzr, x30, [sp, #-16]!
 	mov	x29, sp
 
-	str_l	x21, __fdt_pointer, x5		// Save FDT pointer
+	str_l	x21, __fdt_pointer, x5		// Save FDT pointer 设备树dtb地址
 
 	ldr_l	x4, kimage_vaddr		// Save the offset between
 	sub	x4, x4, x0			// the kernel virtual and

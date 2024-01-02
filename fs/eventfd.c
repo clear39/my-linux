@@ -389,6 +389,7 @@ static int do_eventfd(unsigned int count, int flags)
 	BUILD_BUG_ON(EFD_CLOEXEC != O_CLOEXEC);
 	BUILD_BUG_ON(EFD_NONBLOCK != O_NONBLOCK);
 
+	//只支持三种flags (O_CLOEXEC | O_NONBLOCK ｜ EFD_SEMAPHORE)
 	if (flags & ~EFD_FLAGS_SET)
 		return -EINVAL;
 
@@ -397,6 +398,7 @@ static int do_eventfd(unsigned int count, int flags)
 		return -ENOMEM;
 
 	kref_init(&ctx->kref);
+	// 初始化等待队列
 	init_waitqueue_head(&ctx->wqh);
 	ctx->count = count;
 	ctx->flags = flags;

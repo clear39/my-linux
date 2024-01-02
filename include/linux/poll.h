@@ -44,6 +44,10 @@ typedef struct poll_table_struct {
 static inline void poll_wait(struct file * filp, wait_queue_head_t * wait_address, poll_table *p)
 {
 	if (p && p->_qproc && wait_address)
+		// _qproc 是在 fs/select.c 的 void poll_initwait(struct poll_wqueues *pwq) 函数中初始化;
+		// 在poll_initwait中调用 init_poll_funcptr 函数将 __pollwait 设置给 p->_qproc
+		// __pollwait 定义在 include/linux/poll.h 中，根据 p 信息构建一个 wait_queue_entry_t wait，添加到wait_address队列上
+		// poll_initwait 主要做了初始 poll_table *p;
 		p->_qproc(filp, wait_address, p);
 }
 

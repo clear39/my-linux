@@ -630,9 +630,9 @@ static inline bool rt_rq_is_runnable(struct rt_rq *rt_rq)
 /* Deadline class' related fields in a runqueue */
 struct dl_rq {
 	/* runqueue is an rbtree, ordered by deadline */
-	struct rb_root_cached	root;
+	struct rb_root_cached	root;   // 其成员struct rb_root rb_root为红黑树根节点， struct rb_node *rb_leftmost 为保存deadline最早到期的任务
 
-	unsigned long		dl_nr_running;
+	unsigned long		dl_nr_running; // 队列中有多少个实时任务
 
 #ifdef CONFIG_SMP
 	/*

@@ -69,8 +69,10 @@ static void init_irq_stacks(void)
 }
 #endif
 
+// 在 start_kernel(void) 中调用
 void __init init_IRQ(void)
 {
+	//	为每个CPU分配中断栈
 	init_irq_stacks();
 	irqchip_init();
 	if (!handle_arch_irq)

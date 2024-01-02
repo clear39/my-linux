@@ -101,14 +101,14 @@ enum irq_domain_bus_token {
  */
 struct irq_domain_ops {
 	int (*match)(struct irq_domain *d, struct device_node *node,
-		     enum irq_domain_bus_token bus_token);
+		     enum irq_domain_bus_token bus_token);	// 用于中断控制器设备与IRQ domain的匹配
 	int (*select)(struct irq_domain *d, struct irq_fwspec *fwspec,
 		      enum irq_domain_bus_token bus_token);
-	int (*map)(struct irq_domain *d, unsigned int virq, irq_hw_number_t hw);
+	int (*map)(struct irq_domain *d, unsigned int virq, irq_hw_number_t hw);	//	用于硬件中断号与Linux中断号的映射
 	void (*unmap)(struct irq_domain *d, unsigned int virq);
 	int (*xlate)(struct irq_domain *d, struct device_node *node,
 		     const u32 *intspec, unsigned int intsize,
-		     unsigned long *out_hwirq, unsigned int *out_type);
+		     unsigned long *out_hwirq, unsigned int *out_type);		//	通过device_node，解析硬件中断号和触发方式
 #ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
 	/* extended V2 interfaces to support hierarchy irq_domains */
 	int (*alloc)(struct irq_domain *d, unsigned int virq,
@@ -156,32 +156,34 @@ struct irq_domain_chip_generic;
  * @revmap_tree: Radix map tree for hwirqs that don't fit in the linear map
  * @linear_revmap: Linear table of hwirq->virq reverse mappings
  */
+// 用于硬件中断号和Linux IRQ中断号（virq，虚拟中断号）之间的映射；
+// 每个中断控制器都对应一个IRQ Domain
 struct irq_domain {
-	struct list_head link;
-	const char *name;
-	const struct irq_domain_ops *ops;
-	void *host_data;
+	struct list_head link;				// 用于添加到全局链表 irq_domain_list 中
+	const char *name;					// IRQ domain的名字
+	const struct irq_domain_ops *ops;	// IRQ domain映射操作函数集
+	void *host_data;					// 在GIC驱动中，指向了 irq_gic_data
 	unsigned int flags;
-	unsigned int mapcount;
+	unsigned int mapcount;				// 映射中断的个数
 
 	/* Optional data */
 	struct fwnode_handle *fwnode;
 	enum irq_domain_bus_token bus_token;
 	struct irq_domain_chip_generic *gc;
 #ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
-	struct irq_domain *parent;
+	struct irq_domain *parent;			// 支持级联的话，指向父设备
 #endif
 #ifdef CONFIG_GENERIC_IRQ_DEBUGFS
 	struct dentry		*debugfs_file;
 #endif
 
 	/* reverse map data. The linear map gets appended to the irq_domain */
-	irq_hw_number_t hwirq_max;
+	irq_hw_number_t hwirq_max;			// IRQ domain支持中断数量的最大值
 	unsigned int revmap_direct_max_irq;
-	unsigned int revmap_size;
-	struct radix_tree_root revmap_tree;
+	unsigned int revmap_size;			// 线性映射的大小
+	struct radix_tree_root revmap_tree;	// Radix Tree映射的根节点
 	struct mutex revmap_tree_mutex;
-	unsigned int linear_revmap[];
+	unsigned int linear_revmap[];		// 线性映射用到的查找表
 };
 
 /* Irq domain flags */
@@ -291,13 +293,14 @@ struct irq_domain *irq_find_matching_fwnode(struct fwnode_handle *fwnode,
 	struct irq_fwspec fwspec = {
 		.fwnode = fwnode,
 	};
-
+	//	遍历 irq_domain_list 链表，找到匹配的 irq_domain
 	return irq_find_matching_fwspec(&fwspec, bus_token);
 }
 
 static inline struct irq_domain *irq_find_matching_host(struct device_node *node,
 							enum irq_domain_bus_token bus_token)
 {
+	//	遍历 irq_domain_list 链表，找到匹配的 irq_domain
 	return irq_find_matching_fwnode(of_node_to_fwnode(node), bus_token);
 }
 
@@ -305,6 +308,7 @@ static inline struct irq_domain *irq_find_host(struct device_node *node)
 {
 	struct irq_domain *d;
 
+	//	遍历 irq_domain_list 链表，找到匹配的 irq_domain
 	d = irq_find_matching_host(node, DOMAIN_BUS_WIRED);
 	if (!d)
 		d = irq_find_matching_host(node, DOMAIN_BUS_ANY);

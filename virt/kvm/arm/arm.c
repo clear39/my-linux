@@ -1663,18 +1663,22 @@ int kvm_arch_init(void *opaque)
 	int ret, cpu;
 	bool in_hyp_mode;
 
+	// 判断HYP模式是否可用
 	if (!is_hyp_mode_available()) {
 		kvm_info("HYP mode not available\n");
 		return -ENODEV;
 	}
 
+	// 判断当前是否处在EL2
 	in_hyp_mode = is_kernel_in_hyp_mode();
 
+	// 在ARM架构中，SVE实现要求VHE也要实现
 	if (!in_hyp_mode && kvm_arch_requires_vhe()) {
 		kvm_pr_unimpl("CPU unsupported in non-VHE mode, not initializing\n");
 		return -ENODEV;
 	}
 
+	// 在SMP系统中检查每个CPU是否支持虚拟化
 	for_each_online_cpu(cpu) {
 		smp_call_function_single(cpu, check_kvm_target_cpu, &ret, 1);
 		if (ret < 0) {
@@ -1683,16 +1687,19 @@ int kvm_arch_init(void *opaque)
 		}
 	}
 
+	// 限制IPA地址范围，使其不超过实际的物理地址
 	err = init_common_resources();
 	if (err)
 		return err;
 
 	if (!in_hyp_mode) {
+		// 初始化 Hypervisor
 		err = init_hyp_mode();
 		if (err)
 			goto out_err;
 	}
 
+	// 初始化子系统，包括vGIC、Timer等
 	err = init_subsystems();
 	if (err)
 		goto out_hyp;
@@ -1719,6 +1726,7 @@ void kvm_arch_exit(void)
 
 static int arm_init(void)
 {
+	// kvm_init 定义 virt/kvm/kvm_main.c 
 	int rc = kvm_init(NULL, sizeof(struct kvm_vcpu), 0, THIS_MODULE);
 	return rc;
 }

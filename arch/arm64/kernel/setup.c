@@ -182,6 +182,7 @@ static void __init smp_build_mpidr_hash(void)
 
 static void __init setup_machine_fdt(phys_addr_t dt_phys)
 {
+	// 物理地址转虚拟地址
 	void *dt_virt = fixmap_remap_fdt(dt_phys);
 	const char *name;
 
@@ -291,6 +292,10 @@ void __init setup_arch(char **cmdline_p)
 	early_fixmap_init();
 	early_ioremap_init();
 
+	// Bootloader启动kernel时，将FDT的地址传给Kernel，在Kernel启动的汇编阶段，将FDT地址保存在“x5”寄存器中，
+	// 并定义8字节变量 "__fdt_pointer"，用来表示该地址，以供Kernel的C代码使用。
+	// __fdt_pointer 在 arch/arm64/kernel/head.S 设置，为物理地址
+	// setup_machine_fdt 定义就在本文件中
 	setup_machine_fdt(__fdt_pointer);
 
 	parse_early_param();
@@ -320,6 +325,7 @@ void __init setup_arch(char **cmdline_p)
 	acpi_boot_table_init();
 
 	if (acpi_disabled)
+		// 解析dtb文件，定义在 drivers/of/fdt.c 中
 		unflatten_device_tree();
 
 	bootmem_init();

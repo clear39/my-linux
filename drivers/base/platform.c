@@ -82,10 +82,26 @@ EXPORT_SYMBOL_GPL(platform_get_resource);
 /**
  * platform_get_irq - get an IRQ for a device
  * @dev: platform device
- * @num: IRQ number index
+ * @num: IRQ number index  
  */
+/**
+platform_get_irq()->
+	of_irq_get()->
+		of_irq_parse_one()                  ## 解析dts中中断相关属性，填充结构体of_phandle_args中的args[]参数
+		irq_create_of_mapping()->           
+			of_phandle_args_to_fwspec()     ## 将of_phandle_args->args[]赋值给fwspec->param[]，给translate使用
+			irq_create_fwspec_mapping()->   
+				irq_domain_translate()->    ## 获取中断号和中断触发类型
+					translate()->           ## 对应某个版本的gic处理函数
+
+dts 中中断配置：interrupts = <中断类型 中断号 中断触发类型 中断分区(对应哪个CPU cluster，PPI类型中断特有)>
+
+num：？？
+返回值为：linux映射过的中断号
+*/
 int platform_get_irq(struct platform_device *dev, unsigned int num)
 {
+// CONFIG_SPARC 未定义
 #ifdef CONFIG_SPARC
 	/* sparc does not have irqs represented as IORESOURCE_IRQ resources */
 	if (!dev || num >= dev->archdata.num_irqs)

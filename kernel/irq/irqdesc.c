@@ -315,6 +315,7 @@ static int __init irq_sysfs_init(void)
 
 	return 0;
 }
+// #define postcore_initcall(fn)                __define_initcall(fn, 2)
 postcore_initcall(irq_sysfs_init);
 
 #else /* !CONFIG_SYSFS */
@@ -649,10 +650,13 @@ int __handle_domain_irq(struct irq_domain *domain, unsigned int hwirq,
 	unsigned int irq = hwirq;
 	int ret = 0;
 
+	// 进入中断上下文
 	irq_enter();
 
 #ifdef CONFIG_IRQ_DOMAIN
+	// lookup = true
 	if (lookup)
+		// 根据hwirq去查找Linux中断号
 		irq = irq_find_mapping(domain, hwirq);
 #endif
 
@@ -664,9 +668,10 @@ int __handle_domain_irq(struct irq_domain *domain, unsigned int hwirq,
 		ack_bad_irq(irq);
 		ret = -EINVAL;
 	} else {
+		// 根据Linux中断号找到对应的中断描述符，从而执行中断服务例程
 		generic_handle_irq(irq);
 	}
-
+	// 退出中断上下文
 	irq_exit();
 	set_irq_regs(old_regs);
 	return ret;

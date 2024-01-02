@@ -2659,7 +2659,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
 	if (mutex_lock_killable(&vcpu->mutex))
 		return -EINTR;
 	switch (ioctl) {
-	case KVM_RUN: {
+	case KVM_RUN: {  // 让vcpu运行起来
 		struct pid *oldpid;
 		r = -EINVAL;
 		if (arg)
@@ -3099,7 +3099,7 @@ static long kvm_vm_ioctl(struct file *filp,
 	if (kvm->mm != current->mm)
 		return -EIO;
 	switch (ioctl) {
-	case KVM_CREATE_VCPU:
+	case KVM_CREATE_VCPU: // 为虚拟机创建vcpu对象
 		r = kvm_vm_ioctl_create_vcpu(kvm, arg);
 		break;
 	case KVM_ENABLE_CAP: {
@@ -3383,7 +3383,7 @@ static long kvm_dev_ioctl(struct file *filp,
 			goto out;
 		r = KVM_API_VERSION;
 		break;
-	case KVM_CREATE_VM:
+	case KVM_CREATE_VM: //	创建虚拟机对象
 		r = kvm_dev_ioctl_create_vm(arg);
 		break;
 	case KVM_CHECK_EXTENSION:
@@ -4137,6 +4137,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	int r;
 	int cpu;
 
+	// 体系结构相关初始化
 	r = kvm_arch_init(opaque);
 	if (r)
 		goto out_fail;
@@ -4148,6 +4149,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	 * kvm_arch_init must be called before kvm_irqfd_init to avoid creating
 	 * conflicts in case kvm is already setup for another implementation.
 	 */
+	// 创建工作队列，用于处理VM的shutdown操作
 	r = kvm_irqfd_init();
 	if (r)
 		goto out_irqfd;
@@ -4169,15 +4171,21 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 			goto out_free_1;
 	}
 
+	// cpuhp_setup_state_nocalls 设置CPU热插拔时的回调函数
+	// kvm_starting_cpu 
 	r = cpuhp_setup_state_nocalls(CPUHP_AP_KVM_STARTING, "kvm/cpu:starting",
 				      kvm_starting_cpu, kvm_dying_cpu);
 	if (r)
 		goto out_free_2;
+
+	// 注册重启时的回调函数
 	register_reboot_notifier(&kvm_reboot_notifier);
 
 	/* A kmem cache lets us meet the alignment requirements of fx_save. */
 	if (!vcpu_align)
 		vcpu_align = __alignof__(struct kvm_vcpu);
+	
+	// 创建用于分配kvm_vcpu的slab缓存
 	kvm_vcpu_cache =
 		kmem_cache_create_usercopy("kvm_vcpu", vcpu_size, vcpu_align,
 					   SLAB_ACCOUNT,
@@ -4189,6 +4197,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 		goto out_free_3;
 	}
 
+	// 创建用于分配kvm_async_pf的slab缓存
 	r = kvm_async_pf_init();
 	if (r)
 		goto out_free;
@@ -4197,12 +4206,15 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	kvm_vm_fops.owner = module;
 	kvm_vcpu_fops.owner = module;
 
+	// 注册设备，用于用户空间操作
 	r = misc_register(&kvm_dev);
 	if (r) {
 		pr_err("kvm: misc device register failed\n");
 		goto out_unreg;
 	}
 
+	// 注册Suspend/resume时的操作函数
+	// kvm_syscore_ops
 	register_syscore_ops(&kvm_syscore_ops);
 
 	kvm_preempt_ops.sched_in = kvm_sched_in;
@@ -4210,6 +4222,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 
 	kvm_init_debug();
 
+	// 注册VFIO操作
 	r = kvm_vfio_ops_init();
 	WARN_ON(r);
 

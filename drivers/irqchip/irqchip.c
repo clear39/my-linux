@@ -22,10 +22,16 @@
 static const struct of_device_id
 irqchip_of_match_end __used __section(__irqchip_of_table_end);
 
+// 
 extern struct of_device_id __irqchip_of_table[];
 
+
+// 在 start_kernel(void) -> init_IRQ(void) 中调用
 void __init irqchip_init(void)
 {
+	// of_irq_init 函数执行之前，系统已经完成了device tree的初始化
+	// __irqchip_of_table 在链接脚本 vmlinux.lds中定义段
+	// of_irq_init 定义在 drivers/of/irq.c 
 	of_irq_init(__irqchip_of_table);
 	acpi_probe_device_table(irqchip);
 }

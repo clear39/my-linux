@@ -228,4 +228,7 @@ source "drivers/siox/Kconfig"
 
 source "drivers/slimbus/Kconfig"
 
+source "drivers/byd/Kconfig.byd"
+
+
 endmenu

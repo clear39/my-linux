@@ -2220,6 +2220,7 @@ static int __init init_kprobes(void)
 {
 	int i, err = 0;
 
+	// 1) 初始化用于存储 kprobe 模块的哈希表
 	/* FIXME allocate the probe table, currently defined statically */
 	/* initialize all list heads */
 	for (i = 0; i < KPROBE_TABLE_SIZE; i++) {
@@ -2227,7 +2228,8 @@ static int __init init_kprobes(void)
 		INIT_HLIST_HEAD(&kretprobe_inst_table[i]);
 		raw_spin_lock_init(&(kretprobe_table_locks[i].lock));
 	}
-
+	
+	// 2) 初始化 kprobe 的黑名单函数列表(不能被 kprobe 跟踪的函数列表)
 	err = populate_kprobe_blacklist(__start_kprobe_blacklist,
 					__stop_kprobe_blacklist);
 	if (err) {
@@ -2257,10 +2259,14 @@ static int __init init_kprobes(void)
 
 	/* By default, kprobes are armed */
 	kprobes_all_disarmed = false;
-
+	// 3) 初始化CPU架构相关的环境（x86架构的实现为空）
 	err = arch_init_kprobes();
+
+	// 4) 注册die通知链（这个比较重要）
 	if (!err)
 		err = register_die_notifier(&kprobe_exceptions_nb);
+	
+	// 5) 注册模块通知链
 	if (!err)
 		err = register_module_notifier(&kprobe_module_nb);
 

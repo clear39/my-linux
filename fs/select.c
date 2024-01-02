@@ -861,6 +861,8 @@ static inline __poll_t do_pollfd(struct pollfd *pollfd, poll_table *pwait,
 	/* userland u16 ->events contains POLL... bitmap */
 	filter = demangle_poll(pollfd->events) | EPOLLERR | EPOLLHUP;
 	pwait->_key = filter | busy_flag;
+	// 执行我们写的poll函数指针指向的函数实体
+	// 执行__pollwait(file, &wait_queue, wait)，也就是将进程挂接到对应的等待队列下
 	mask = vfs_poll(f.file, pwait);
 	if (mask & busy_flag)
 		*can_busy_poll = true;
@@ -901,7 +903,7 @@ static int do_poll(struct poll_list *list, struct poll_wqueues *wait,
 
 			pfd = walk->entries;
 			pfd_end = pfd + walk->len;
-			for (; pfd != pfd_end; pfd++) {
+			for (; pfd != pfd_end; pfd++) {   /* 可以监测多个驱动设备所产生的事件 */
 				/*
 				 * Fish for events. If we found one, record it
 				 * and kill poll_table->_qproc, so we don't
@@ -929,6 +931,7 @@ static int do_poll(struct poll_list *list, struct poll_wqueues *wait,
 			if (signal_pending(current))
 				count = -EINTR;
 		}
+		 /* 如果有事件发生，或者超时，则跳出poll */ 
 		if (count || timed_out)
 			break;
 
@@ -952,7 +955,7 @@ static int do_poll(struct poll_list *list, struct poll_wqueues *wait,
 			expire = timespec64_to_ktime(*end_time);
 			to = &expire;
 		}
-
+		/* 如果没有事件发生，那么陷入休眠状态 */
 		if (!poll_schedule_timeout(wait, TASK_INTERRUPTIBLE, to, slack))
 			timed_out = 1;
 	}
@@ -1002,6 +1005,7 @@ static int do_sys_poll(struct pollfd __user *ufds, unsigned int nfds,
 		}
 	}
 
+	//  实际效果：令函数指针 table.pt.qproc = __pollwait，这个函数指针最终会传递给poll_wait函数调用中的wait->qproc
 	poll_initwait(&table);
 	fdcount = do_poll(head, &table, end_time);
 	poll_freewait(&table);

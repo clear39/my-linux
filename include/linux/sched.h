@@ -500,15 +500,18 @@ struct sched_rt_entity {
 } __randomize_layout;
 
 struct sched_dl_entity {
-	struct rb_node			rb_node;
+	struct rb_node			rb_node;  // 红黑树节点
 
 	/*
 	 * Original scheduling parameters. Copied here from sched_attr
 	 * during sched_setattr(), they will remain the same until
 	 * the next sched_setattr().
 	 */
+	// 任务能够运行的时间
 	u64				dl_runtime;	/* Maximum runtime for each instance	*/
+	// 任务的相对限期
 	u64				dl_deadline;	/* Relative deadline of each instance	*/
+	// 任务的调度周期
 	u64				dl_period;	/* Separation of two instances (period) */
 	u64				dl_bw;		/* dl_runtime / dl_period		*/
 	u64				dl_density;	/* dl_runtime / dl_deadline		*/
@@ -518,7 +521,9 @@ struct sched_dl_entity {
 	 * they are continuously updated during task execution. Note that
 	 * the remaining runtime could be < 0 in case we are in overrun.
 	 */
+	// 任务的剩余运行时间
 	s64				runtime;	/* Remaining runtime for this instance	*/
+	// 任务的绝对限期（dl_deadline加上当前时间）
 	u64				deadline;	/* Absolute deadline for this instance	*/
 	unsigned int			flags;		/* Specifying the scheduler behaviour	*/
 
@@ -556,7 +561,7 @@ struct sched_dl_entity {
 	 * Bandwidth enforcement timer. Each -deadline task has its
 	 * own bandwidth to be enforced, thus we need one timer per task.
 	 */
-	struct hrtimer			dl_timer;
+	struct hrtimer			dl_timer; // 高精度定时器，用来实现任务的周期调度
 
 	/*
 	 * Inactive timer, responsible for decreasing the active utilization

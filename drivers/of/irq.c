@@ -390,10 +390,12 @@ int of_irq_get(struct device_node *dev, int index)
 	struct of_phandle_args oirq;
 	struct irq_domain *domain;
 
+	//	从设备节点中解析中断信息
 	rc = of_irq_parse_one(dev, index, &oirq);
 	if (rc)
 		return rc;
 
+	//	遍历 irq_domain_list 链表，找到匹配的 irq_domain
 	domain = irq_find_host(oirq.np);
 	if (!domain)
 		return -EPROBE_DEFER;
@@ -505,6 +507,7 @@ void __init of_irq_init(const struct of_device_id *matches)
 			goto err;
 		}
 
+		// 解析节点，获取回调函数
 		desc->irq_init_cb = match->data;
 		desc->dev = of_node_get(np);
 		desc->interrupt_parent = of_irq_find_parent(np);
@@ -537,6 +540,8 @@ void __init of_irq_init(const struct of_device_id *matches)
 			pr_debug("of_irq_init: init %pOF (%p), parent %p\n",
 				 desc->dev,
 				 desc->dev, desc->interrupt_parent);
+			
+			// 针对gic-v2调用回调函数：gic_of_init
 			ret = desc->irq_init_cb(desc->dev,
 						desc->interrupt_parent);
 			if (ret) {

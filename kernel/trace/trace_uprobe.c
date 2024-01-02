@@ -1421,6 +1421,7 @@ static __init int init_uprobe_trace(void)
 	struct dentry *d_tracer;
 	int ret;
 
+	// 将 trace_uprobe_ops 添加到 dyn_event_ops_list 全局链表上
 	ret = dyn_event_register(&trace_uprobe_ops);
 	if (ret)
 		return ret;
@@ -1429,6 +1430,7 @@ static __init int init_uprobe_trace(void)
 	if (IS_ERR(d_tracer))
 		return 0;
 
+	// 创建uprobe_events,并创建对应的ops
 	trace_create_file("uprobe_events", 0644, d_tracer,
 				    NULL, &uprobe_events_ops);
 	/* Profile interface */

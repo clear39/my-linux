@@ -1,0 +1,7 @@
+config BYD
+bool "config byd driver"
+default y
+help
+    This selects byd driver
+
+source "drivers/byd/monitor/Kconfig.byd"

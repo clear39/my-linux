@@ -137,6 +137,7 @@ struct irq_domain *__irq_domain_add(struct fwnode_handle *fwnode, int size,
 
 	static atomic_t unknown_domains;
 
+	// domain大小为 struct irq_domain 加上 gic_irqs 个 unsigned int
 	domain = kzalloc_node(sizeof(*domain) + (sizeof(unsigned int) * size),
 			      GFP_KERNEL, of_node_to_nid(of_node));
 	if (WARN_ON(!domain))
@@ -222,6 +223,7 @@ struct irq_domain *__irq_domain_add(struct fwnode_handle *fwnode, int size,
 
 	mutex_lock(&irq_domain_mutex);
 	debugfs_add_domain_dir(domain);
+	// 将创建好的struct irq_domain加入全局链表irq_domain_list
 	list_add(&domain->link, &irq_domain_list);
 	mutex_unlock(&irq_domain_mutex);
 

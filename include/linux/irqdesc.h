@@ -170,6 +170,7 @@ int __handle_domain_irq(struct irq_domain *domain, unsigned int hwirq,
 static inline int handle_domain_irq(struct irq_domain *domain,
 				    unsigned int hwirq, struct pt_regs *regs)
 {
+	// 实现在 kernel/irq/irqdesc.c
 	return __handle_domain_irq(domain, hwirq, true, regs);
 }
 #endif

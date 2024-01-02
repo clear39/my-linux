@@ -55,7 +55,7 @@ struct rb_root {
  * find it a bit asymmetric, but that's ok.
  */
 struct rb_root_cached {
-	struct rb_root rb_root;
+	struct rb_root rb_root;  // 红黑树根节点
 	struct rb_node *rb_leftmost;
 };
 

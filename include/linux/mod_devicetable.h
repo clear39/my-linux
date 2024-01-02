@@ -239,10 +239,10 @@ struct sdw_device_id {
  * Struct used for matching a device
  */
 struct of_device_id {
-	char	name[32];
-	char	type[32];
-	char	compatible[128];
-	const void *data;
+	char	name[32];  // 要匹配的device node的名字
+	char	type[32];	// 要匹配的device node的类型
+	char	compatible[128]; // 匹配字符串（DT compatible string），用来匹配适合的 device node
+	const void *data;  // 对应中断控制器GIC来说，这里是初始化函数指针 
 };
 
 /* VIO */

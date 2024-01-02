@@ -858,29 +858,30 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 	unsigned int cpu = smp_processor_id();
 	struct pt_regs *old_regs = set_irq_regs(regs);
 
+	// NR_IPI = 7
 	if ((unsigned)ipinr < NR_IPI) {
 		trace_ipi_entry_rcuidle(ipi_types[ipinr]);
 		__inc_irq_stat(cpu, ipi_irqs[ipinr]);
 	}
 
 	switch (ipinr) {
-	case IPI_RESCHEDULE:
+	case IPI_RESCHEDULE:  // 0
 		scheduler_ipi();
 		break;
 
-	case IPI_CALL_FUNC:
+	case IPI_CALL_FUNC:  // 1
 		irq_enter();
 		generic_smp_call_function_interrupt();
 		irq_exit();
 		break;
 
-	case IPI_CPU_STOP:
+	case IPI_CPU_STOP:	// 2
 		irq_enter();
 		ipi_cpu_stop(cpu);
 		irq_exit();
 		break;
 
-	case IPI_CPU_CRASH_STOP:
+	case IPI_CPU_CRASH_STOP:	//	3
 		if (IS_ENABLED(CONFIG_KEXEC_CORE)) {
 			irq_enter();
 			ipi_cpu_crash_stop(cpu, regs);
@@ -890,7 +891,7 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		break;
 
 #ifdef CONFIG_GENERIC_CLOCKEVENTS_BROADCAST
-	case IPI_TIMER:
+	case IPI_TIMER:		//	4
 		irq_enter();
 		tick_receive_broadcast();
 		irq_exit();
@@ -898,7 +899,7 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 #endif
 
 #ifdef CONFIG_IRQ_WORK
-	case IPI_IRQ_WORK:
+	case IPI_IRQ_WORK:	//	5
 		irq_enter();
 		irq_work_run();
 		irq_exit();
@@ -906,7 +907,7 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 #endif
 
 #ifdef CONFIG_ARM64_ACPI_PARKING_PROTOCOL
-	case IPI_WAKEUP:
+	case IPI_WAKEUP:	//	6
 		WARN_ONCE(!acpi_parking_protocol_valid(cpu),
 			  "CPU%u: Wake-up IPI outside the ACPI parking protocol\n",
 			  cpu);

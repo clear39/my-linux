@@ -646,6 +646,9 @@ bool of_device_is_available(const struct device_node *device)
 	bool res;
 
 	raw_spin_lock_irqsave(&devtree_lock, flags);
+	// 判断给定的节点是否可用，方法如下：
+	// 1、不存在"status"节点，默认为可用；
+	// 2、存在"status"节点, 且值为"okay"或者"ok"，则为可用，否则为不可用；
 	res = __of_device_is_available(device);
 	raw_spin_unlock_irqrestore(&devtree_lock, flags);
 	return res;
@@ -947,6 +950,7 @@ struct device_node *of_find_node_opts_by_path(const char *path, const char **opt
 		*opts = separator ? separator + 1 : NULL;
 
 	if (strcmp(path, "/") == 0)
+		// of_root 是在 start_kernel-->setup_arch-->unflatten_device_tree中初始化
 		return of_node_get(of_root);
 
 	/* The path could begin with an alias */

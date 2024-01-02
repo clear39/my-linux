@@ -399,7 +399,7 @@ tsk	.req	x28		// current thread_info
  * Interrupt handling.
  */
 	.macro	irq_handler
-	ldr_l	x1, handle_arch_irq
+	ldr_l	x1, handle_arch_irq  // handle_arch_irq 函数指针，指向 gic_handle_irq
 	mov	x0, sp
 	irq_stack_entry
 	blr	x1
